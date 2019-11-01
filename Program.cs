@@ -17,7 +17,9 @@ namespace dataproto
                 Console.WriteLine("That takes a special kind of stupid!");
                 return;
             };
-            var sn = 800111123;
+            Console.WriteLine("Enter the serial number prefix you want use");
+            var prefix = Console.ReadLine();
+            
             var rand = new Random();
             var basepath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
             basepath = Path.Combine(Path.Combine(basepath, "temp"), "dataproto");
@@ -28,13 +30,14 @@ namespace dataproto
                 Console.WriteLine($"Creating basepath {basepath}");
             }
 
-            
+            var accountId = rand.Next();
+            var sn = "";
             for (int idx = 0; idx < 24; idx++)
             {
-                sn += idx;
+                sn = $"{prefix}{idx.ToString("000")}";
                 var snstr = sn.ToString();
                 Console.WriteLine($"Sensor serial number: {snstr}");
-                filename = Path.Combine(basepath, $"{snstr}_data.json");
+                
                 var sb = new StringBuilder();
                 
                 var timestamp = new DateTime(2017, 3, 15, 10, 17, 22);
@@ -43,11 +46,12 @@ namespace dataproto
                 Console.WriteLine($"Sensor Serial Number: {snstr} Min: {min}  Max: {max}");
                 sb.Append("[");
                 var first = true;
+                DateTime newtimestamp = DateTime.MinValue;
                 while (timestamp < DateTime.Now)
                 {
                     var data = Math.Round(min + (max - min) * rand.NextDouble(), 2);
                     var timestr = timestamp.ToString("yyyy-MM-dd HH:mm:ss");
-                    var record = $"{{\"timestamp\": {timestr}, \"data\": {data} }}";
+                    var record = $"{{\"timestamp\": \"{timestr}\", \"data\": {data} }}";
                     Console.WriteLine(record);
                     if (!first)
                     {
@@ -59,12 +63,19 @@ namespace dataproto
                     }
                     sb.Append(record);
 
-                    timestamp = timestamp.AddMinutes(10).AddSeconds( (int)(5 * rand.NextDouble() 
+                    newtimestamp = timestamp.AddMinutes(10).AddSeconds( (int)(5 * rand.NextDouble() 
                                 * ((rand.Next() % 2 == 0) ? 1 : -1)) );
-                }
-                sb.Append("]");
-
-                File.WriteAllText(filename, sb.ToString());
+                    if ((newtimestamp.Month != timestamp.Month) || newtimestamp >= DateTime.Now)
+                    {
+                        sb.Append("]");
+                        filename = Path.Combine(basepath, $"{accountId}_{snstr}_{timestamp.Year}_{timestamp.Month:00}_data.json");
+                        File.WriteAllText(filename, sb.ToString());
+                        sb.Clear();
+                        sb.Append("[");
+                        first = true;
+                    }
+                    timestamp = newtimestamp;
+                }                
             }
         }
     }
